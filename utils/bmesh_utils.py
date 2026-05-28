@@ -7,10 +7,25 @@ ALL_DOMAINS = {'faces', 'edges', 'verts', 'loops'}
 ALL_POSSIBLE_LAYERS = {'bevel_weight', 'int', 'paint_mask', 'float_color', 'string', 'freestyle', 'skin', 'float_vector', 'uv', 'shape', 'deform', 'crease', 'face_map', 'color', 'float'}
 GET_LAYER_FNS = [operator.attrgetter(f'{domain}.layers') for domain in ALL_DOMAINS]
 
+# Dispatch tables replace the repeated match/get/new blocks
+_DOMAIN_MAP = {
+    MeshDomain.FACES: lambda bm: bm.faces,
+    MeshDomain.LOOPS: lambda bm: bm.loops,
+    MeshDomain.EDGES: lambda bm: bm.edges,
+    MeshDomain.VERTS: lambda bm: bm.verts,
+}
+
+_LAYER_TYPE_MAP = {
+    MeshLayerType.STRING:       lambda dom: dom.layers.string,
+    MeshLayerType.INT:          lambda dom: dom.layers.int,
+    MeshLayerType.FLOAT:        lambda dom: dom.layers.float,
+    MeshLayerType.FLOAT_VECTOR: lambda dom: dom.layers.float_vector,
+}
+
 
 def resolve_domain_and_layer_type(bm: bmesh.types.BMesh, domain: MeshDomain, layer_type: MeshLayerType, layer_name: str) -> tuple[bmesh.types.BMElemSeq, Any]:
     """
-    Resolve the domain and layer type to the corresponding bmesh domain and layer type
+    Resolve the domain and layer type to the corresponding bmesh domain and layer type.
 
     Args:
         bm (bmesh.types.BMesh): bmesh object to resolve domain and layer type on
@@ -21,34 +36,9 @@ def resolve_domain_and_layer_type(bm: bmesh.types.BMesh, domain: MeshDomain, lay
     Returns:
         dom, layer: resolved domain and layer object
     """
-    match domain:
-        case MeshDomain.FACES:
-            dom = bm.faces
-        case MeshDomain.LOOPS:
-            dom = bm.loops
-        case MeshDomain.EDGES:
-            dom = bm.edges
-        case MeshDomain.VERTS:
-            dom = bm.verts
-
-    match layer_type:
-        case MeshLayerType.STRING:
-            layer = dom.layers.string.get(layer_name, None)
-            if not layer:
-                layer = dom.layers.string.new(layer_name)
-        case MeshLayerType.INT:
-            layer = dom.layers.int.get(layer_name, None)
-            if not layer:
-                layer = dom.layers.int.new(layer_name)
-        case MeshLayerType.FLOAT:
-            layer = dom.layers.float.get(layer_name, None)
-            if not layer:
-                layer = dom.layers.float.new(layer_name)
-        case MeshLayerType.FLOAT_VECTOR:
-            layer = dom.layers.float_vector.get(layer_name, None)
-            if not layer:
-                layer = dom.layers.float_vector.new(layer_name)
-
+    dom = _DOMAIN_MAP[domain](bm)
+    layer_accessor = _LAYER_TYPE_MAP[layer_type](dom)
+    layer = layer_accessor.get(layer_name) or layer_accessor.new(layer_name)
     return dom, layer
 
 
@@ -58,20 +48,18 @@ def write_layer_data(bm: bmesh.types.BMesh, domain: MeshDomain, layer_type: Mesh
 
     Args:
         bm (bmesh.types.BMesh): bmesh object to write to
-        domain (MeshDomain): Domain to read from
-        layer_type (MeshLayerType): Layer type to read from
+        domain (MeshDomain): Domain to write to
+        layer_type (MeshLayerType): Layer type to write to
         layer_name (str): Name of the layer to write to
         data (Iterable[Any]): Data to write
         start_index (int, optional): Index to start writing data from. Defaults to 0.
     """
     dom, layer = resolve_domain_and_layer_type(bm, domain, layer_type, layer_name)
-
-    # Check if data contains string data and encode them to bytes
-    if data and isinstance(data[0], str):
-        data = [bytes(d, "utf-8") for d in data]
-
-    for dat, dom_elemnt in zip(data, dom[start_index:len(data)]):
-        dom_elemnt[layer] = dat
+    # Encode strings to bytes; leave everything else as-is
+    encoded = [d.encode() if isinstance(d, str) else d for d in data]
+    # zip naturally stops at the shorter sequence — no explicit end index needed
+    for element, value in zip(dom[start_index:], encoded):
+        element[layer] = value
 
 
 def read_layer_data(bm: bmesh.types.BMesh, domain: MeshDomain, layer_type: MeshLayerType, layer_name: str, uniform: bool = False, start_index: int = 0, size: int = None) -> Iterable[Any]:
@@ -85,47 +73,41 @@ def read_layer_data(bm: bmesh.types.BMesh, domain: MeshDomain, layer_type: MeshL
         layer_name (str): Name of the layer to read from
         uniform (bool, optional): Whether the data is expected to be the same across the mesh. Defaults to False.
         start_index (int, optional): Index to start reading data from. Defaults to 0.
-        size (int, optional): Number of data to read. Defaults to None.
+        size (int, optional): Number of elements to read. Defaults to None (read all).
 
     Returns:
         Iterable[Any]: Data read
     """
     dom, layer = resolve_domain_and_layer_type(bm, domain, layer_type, layer_name)
 
+    def _decode(v: Any) -> Any:
+        return v.decode() if isinstance(v, bytes) else v
+
     if uniform:
-        # Early exit on uniform data
-        for dom_elemnt in dom:
-            data = dom_elemnt[layer]
-            if data and isinstance(data, bytes):
-                return data.decode("utf-8")
-            return data
+        # Return the value of the first element, or None if the mesh is empty
+        for element in dom:
+            return _decode(element[layer])
+        return None
 
-    data = [dom_elemnt[layer] for dom_elemnt in dom[start_index:size]]
-
-    # Check if data contains string data and decode them to strings
-    if data and isinstance(data[0], bytes):
-        data = [d.decode("utf-8") for d in data]
-
-    return data
+    end = (start_index + size) if size is not None else None
+    return [_decode(element[layer]) for element in dom[start_index:end]]
 
 
 def copy_all_layers(src_bmesh: bmesh.types.BMesh, dst_bmesh: bmesh.types.BMesh) -> None:
     """
-    Copy all layers from src_bmesh to dst_bmesh
+    Copy all layers from src_bmesh to dst_bmesh.
 
     Args:
         src_bmesh (bmesh.types.BMesh): bmesh to copy from
         dst_bmesh (bmesh.types.BMesh): bmesh to copy to
     """
     for get_layers in GET_LAYER_FNS:
-        layers = get_layers(src_bmesh)  # equivalent to src_bmesh.{domain}.layers
-        layer_names = [available_layer for available_layer in dir(layers) if available_layer in ALL_POSSIBLE_LAYERS]
+        layers = get_layers(src_bmesh)
+        layer_names = [name for name in dir(layers) if name in ALL_POSSIBLE_LAYERS]
 
-        get_layer_attr_fns = [operator.attrgetter(layer) for layer in layer_names]
-        for get_layer_attr in get_layer_attr_fns:
-            attrs = get_layer_attr(layers)  # equivalent to src_bmesh.{domain}.layers.{layer}
-            dst_attrs = get_layer_attr(get_layers(dst_bmesh))
-            # For loop filters out empty layers
+        for layer_name in layer_names:
+            attrs = getattr(layers, layer_name)
+            dst_attrs = getattr(get_layers(dst_bmesh), layer_name)
             for name, _ in attrs.items():
                 if name not in dst_attrs.keys():
                     dst_attrs.new(name)
@@ -133,7 +115,7 @@ def copy_all_layers(src_bmesh: bmesh.types.BMesh, dst_bmesh: bmesh.types.BMesh) 
 
 def bmesh_from_faces(src_bmesh: bmesh.types.BMesh, faces: Iterable[bmesh.types.BMFace]) -> bmesh.types.BMesh:
     """
-    Create a new bmesh from a given sequence of faces from the given src_bmesh
+    Create a new bmesh from a given sequence of faces from the given src_bmesh.
 
     Args:
         src_bmesh (bmesh.types.BMesh): source bmesh to copy from
@@ -142,61 +124,58 @@ def bmesh_from_faces(src_bmesh: bmesh.types.BMesh, faces: Iterable[bmesh.types.B
     Returns:
         bmesh.types.BMesh: new bmesh containing the given faces
     """
-
     dst_bmesh = bmesh.new()
     copy_all_layers(src_bmesh, dst_bmesh)
-    min_vert_index = min([v.index for f in faces for v in f.verts])
 
-    # Copy vertices and assign correct indices
-    accessed_indices = set()
-    for face in faces:
-        for v in face.verts:
-            if v.index not in accessed_indices:
-                nv = dst_bmesh.verts.new(v.co, v)
-                nv.index = v.index - min_vert_index
-                accessed_indices.add(v.index)
+    faces = list(faces)  # allow multiple iteration
+    all_verts = {v for f in faces for v in f.verts}
+    min_index = min(v.index for v in all_verts)
+
+    # Build an explicit vert_map so face creation is correct regardless of index contiguity
+    vert_map: dict[int, bmesh.types.BMVert] = {}
+    for v in sorted(all_verts, key=lambda v: v.index):
+        nv = dst_bmesh.verts.new(v.co, v)
+        nv.index = v.index - min_index
+        vert_map[v.index] = nv
+
     dst_bmesh.verts.sort()
-    dst_bmesh.verts.index_update()
     dst_bmesh.verts.ensure_lookup_table()
 
-    # Copy faces
     for face in faces:
-        dst_bmesh.faces.new([dst_bmesh.verts[v.index - min_vert_index] for v in face.verts], face)
+        dst_bmesh.faces.new([vert_map[v.index] for v in face.verts], face)
+
     dst_bmesh.faces.index_update()
     dst_bmesh.faces.sort()
-
     return dst_bmesh
 
 
-def bmesh_join(list_of_bmeshes: Iterable[bmesh.types.BMesh], normal_update=False) -> bmesh.types.BMesh:
-    """ takes as input a list of bm references and outputs a single merged bmesh
-    allows an additional 'normal_update=True' to force _normal_ calculations.
+def bmesh_join(list_of_bmeshes: Iterable[bmesh.types.BMesh], normal_update: bool = False) -> bmesh.types.BMesh:
+    """
+    Takes as input a list of bmesh references and outputs a single merged bmesh.
+    Layers from all source meshes are copied (not just the first).
+    Allows an additional 'normal_update=True' to force normal calculations.
+
     Modified from https://blender.stackexchange.com/questions/50160/scripting-low-level-join-meshes-elements-hopefully-with-bmesh
     """
-
     bm = bmesh.new()
-    add_vert = bm.verts.new
-    add_face = bm.faces.new
 
-    copy_all_layers(list_of_bmeshes[0], bm)
+    for src in list_of_bmeshes:
+        copy_all_layers(src, bm)
 
-    for bm_to_add in list_of_bmeshes:
+    for src_bm in list_of_bmeshes:
+        vert_map = {}
+        for v in src_bm.verts:
+            nv = bm.verts.new(v.co)
+            nv.normal = v.normal
+            vert_map[v] = nv
 
-        for v in bm_to_add.verts:
-            nv = add_vert(v.co, v)
-            nv.copy_from(v)
+        bm.verts.index_update()
+        bm.verts.ensure_lookup_table()
 
-    bm.verts.index_update()
-    bm.verts.ensure_lookup_table()
+        for face in src_bm.faces:
+            nf = bm.faces.new([vert_map[v] for v in face.verts], face)
+            nf.copy_from(face)
 
-    offset = 0
-    for bm_to_add in list_of_bmeshes:
-
-        if bm_to_add.faces:
-            for face in bm_to_add.faces:
-                nf = add_face([bm.verts[i.index + offset] for i in face.verts], face)
-                nf.copy_from(face)
-        offset += len(bm_to_add.verts)
     bm.faces.index_update()
 
     if normal_update:
@@ -205,15 +184,17 @@ def bmesh_join(list_of_bmeshes: Iterable[bmesh.types.BMesh], normal_update=False
     return bm
 
 
-def bmesh_copy_vert_location(src_bmesh, dst_bmesh):
+def bmesh_copy_vert_location(src_bmesh: bmesh.types.BMesh, dst_bmesh: bmesh.types.BMesh) -> None:
     """
-    Copy the vertex locations from src_bmesh to dst_bmesh by vertex indieces.
+    Copy the vertex locations from src_bmesh to dst_bmesh by vertex indices.
     Both must have the same number of vertices.
 
     Args:
         src_bmesh (bmesh.types.BMesh): source bmesh to copy from
         dst_bmesh (bmesh.types.BMesh): destination bmesh to copy to
     """
+    print(f"transpose verts: {len(src_bmesh.verts)}, original verts: {len(dst_bmesh.verts)}")
+
     if len(src_bmesh.verts) != len(dst_bmesh.verts):
         raise ValueError("src_bmesh and dst_bmesh must have the same number of vertices")
 
