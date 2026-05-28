@@ -131,11 +131,20 @@ def copy_multires_objs_to_new_mesh(
 
     # Disable all modifiers except MULTIRES so the depsgraph reflects only the base mesh
     disabled_modifiers = []
+    broken_modifiers = []
     for obj in multires_objs:
         for mod in obj.modifiers:
             if mod.type != "MULTIRES":
                 mod.show_viewport = False
                 disabled_modifiers.append(mod)
+            else:
+                bpy.context.view_layer.objects.active = obj
+                try:
+                    bpy.ops.object.modifier_apply(modifier=mod.name)
+                except:
+                    broken_modifiers.append(mod)          
+                finally:
+                    bpy.ops.object.modifier_add(type='MULTIRES')
 
     depsgraph = context.evaluated_depsgraph_get()
 
