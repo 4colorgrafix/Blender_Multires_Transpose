@@ -135,7 +135,8 @@ class MULTIRES_TRANSPOSE_OT_apply_transpose_target(LoggerOperator):
 
         for target_obj in transpose_targets:
             # Derive the original object name by stripping the "_Target" suffix
-            original_obj_name = target_obj.name.removesuffix("_Target")
+            substr =  target_obj.name.split("_Target")
+            original_obj_name = substr[0]
             if original_obj_name not in bpy.data.objects:
                 print(
                     f"Object '{target_obj.name}' does not have a matching original object, skipping"
