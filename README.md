@@ -11,8 +11,9 @@ UI Panel located in the sidebar of the 3D viewport under `Edit > Multires Transp
 
 ## Features:
 
-* Allows editing an arbitrary number of multiresolution modifier-enabled meshes at once through creating a single lower subdivision level proxy mesh.
+* Allows editing an arbitrary number of multiresolution modifier-enabled meshes at once through creating a single proxy mesh.
     * This proxy mesh can be created through the Create Transpose Target operator
+    * Once the Multires level is frozen, higher levels are erased. Lower levls can be reconstructed with the Multires modifier
 * Changes to the proxy mesh can be propagated back to the original meshes with the Apply Transpose Target operator
     * Modifiers can be used on the proxy mesh, this allows you to rig the proxy mesh or use other modifiers.
     * This makes use of the multires modifier's reshape operator, which may not propagate the changes with 100% accuracy.
