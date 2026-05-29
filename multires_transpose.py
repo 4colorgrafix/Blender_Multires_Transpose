@@ -35,13 +35,11 @@ class MULTIRES_TRANSPOSE_OT_create_transpose_target(LoggerOperator):
         default=False,
         description="Use the current multires level of the selected objects for the transpose target"
     )
-    """
     include_non_multires: bpy.props.BoolProperty(
         name="Include Non-Multires Objects",
         default=False,
         description="Include objects that do not have a multires modifier in the transpose target"
     )
-    """
     hide_original: bpy.props.BoolProperty(
         name="Hide Original Objects",
         default=True,
@@ -77,7 +75,7 @@ class MULTIRES_TRANSPOSE_OT_create_transpose_target(LoggerOperator):
         col.label(text="Settings:", icon="SETTINGS")
 
         col.prop(self, "use_multires_level_as_is", text="Use Multires Level As Is")
-        #col.prop(self, "include_non_multires", text="Include Non-Multires Objects")
+        col.prop(self, "include_non_multires", text="Include Non-Multires Objects")
         col.prop(self, "hide_original", text="Hide Original Objects")
 
         row = col.row()
