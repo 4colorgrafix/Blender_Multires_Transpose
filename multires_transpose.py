@@ -54,11 +54,13 @@ class MULTIRES_TRANSPOSE_OT_create_transpose_target(LoggerOperator):
         )
         transpose_target.name = TRANSPOSE_TARGET_NAME
 
+        """
         for obj in context.selected_objects:
             # Applies location, rotation, and scale
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             obj.select_set(False)
-
+        """
+        
         if self.hide_original:
             for obj in merged_objs:
                 obj.hide_set(True)
