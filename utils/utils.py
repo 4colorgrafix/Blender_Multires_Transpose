@@ -186,3 +186,29 @@ def copy_multires_objs_to_new_mesh(
     )
     context.collection.objects.link(transpose_target_obj)
     return transpose_target_obj, merged_objs
+
+def restore_lower_levels(context):
+    """
+    Restores lower subdivision levels for all selected meshes
+
+    Args:
+        context (bpy.types.Context): Blender context
+    """
+    for obj in context.selected_objects:
+        bpy.context.view_layer.objects.active = obj
+        for mod in obj.modifiers:
+            if mod.type == "MULTIRES":
+                unsubdivide_loop(mod)
+
+def unsubdivide_loop(mod):
+    """
+    Unsubdivides a specific mesh by looping until it can no longer get to a lower level
+
+    Args:
+        mod: The Multiresolution modifier
+    """
+    try:
+        while True:
+            bpy.ops.object.multires_rebuild_subdiv(modifier=mod.name)
+    except:
+        return

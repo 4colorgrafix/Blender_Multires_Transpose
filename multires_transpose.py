@@ -18,7 +18,7 @@ class LoggerOperator(bpy.types.Operator):
         self.logger = logging.getLogger(__name__ + "." + self.__class__.__name__)
 
 
-class MULTIRES_TRANSPOSE_OT_create_transpose_target(LoggerOperator):
+class MULTIRES_TRANSPOSE_OT_create_transpose_target(bpy.types.Operator):
     bl_idname = "multires_transpose.create_transpose_target"
     bl_label = "Create Transpose Target"
     bl_options = {'REGISTER', 'UNDO'}
@@ -86,7 +86,7 @@ class MULTIRES_TRANSPOSE_OT_create_transpose_target(LoggerOperator):
         return context.window_manager.invoke_props_dialog(self)
 
 
-class MULTIRES_TRANSPOSE_OT_apply_transpose_target(LoggerOperator):
+class MULTIRES_TRANSPOSE_OT_apply_transpose_target(bpy.types.Operator):
     bl_idname = "multires_transpose.apply_transpose_target"
     bl_label = "Apply Transpose Target"
     bl_options = {'REGISTER', 'UNDO'}
