@@ -198,17 +198,4 @@ def restore_lower_levels(context):
         bpy.context.view_layer.objects.active = obj
         for mod in obj.modifiers:
             if mod.type == "MULTIRES":
-                unsubdivide_loop(mod)
-
-def unsubdivide_loop(mod):
-    """
-    Unsubdivides a specific mesh by looping until it can no longer get to a lower level
-
-    Args:
-        mod: The Multiresolution modifier
-    """
-    try:
-        while True:
-            bpy.ops.object.multires_rebuild_subdiv(modifier=mod.name)
-    except:
-        return
+                bpy.ops.object.multires_rebuild_subdiv(modifier=mod.name)
