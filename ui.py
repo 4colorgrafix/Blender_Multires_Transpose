@@ -21,6 +21,7 @@ class MULTIRES_TRANSPOSE_PT_operator_panel(MultiresTransposePanel):
         layout = self.layout
         layout.operator(operator="multires_transpose.create_transpose_target", icon='MOD_MULTIRES')
         layout.operator(operator="multires_transpose.apply_transpose_target", icon='SHADERFX')
+        layout.operator(operator="multires_transpose.restore_lower_levels", icon='CUBE')
 
 
 classes = (MULTIRES_TRANSPOSE_PT_operator_panel,)
