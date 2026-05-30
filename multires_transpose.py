@@ -4,19 +4,12 @@ import time
 import logging
 from .data_types import MeshDomain, MeshLayerType
 from .utils.bmesh_context import bmesh_from_obj
-from .utils.utils import copy_multires_objs_to_new_mesh, create_meshes_by_original_name, restore_vertex_index
+from .utils.utils import copy_multires_objs_to_new_mesh, create_meshes_by_original_name, restore_vertex_index, restore_lower_levels
 from .utils.utils import ORIGINAL_SUBDIVISION_LEVEL_LAYER
 from .utils.bmesh_utils import bmesh_copy_vert_location, read_layer_data
 import numpy as np
 
 TRANSPOSE_TARGET_NAME = "Multires_Transpose_Target"
-
-
-class LoggerOperator(bpy.types.Operator):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.logger = logging.getLogger(__name__ + "." + self.__class__.__name__)
-
 
 class MULTIRES_TRANSPOSE_OT_create_transpose_target(bpy.types.Operator):
     bl_idname = "multires_transpose.create_transpose_target"
@@ -248,10 +241,18 @@ class MULTIRES_TRANSPOSE_OT_apply_transpose_target(bpy.types.Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
+class MULTIRES_TRANSPOSE_OT_restore_lower_level(bpy.types.Operator):
+    bl_idname = "multires_transpose.restore_lower_levels"
+    bl_label = "Restore Lower Levels"
 
+    def execute(self, context):
+        restore_lower_levels(context)
+        return {'FINISHED'}
+    
 classes = (
     MULTIRES_TRANSPOSE_OT_create_transpose_target,
     MULTIRES_TRANSPOSE_OT_apply_transpose_target,
+    MULTIRES_TRANSPOSE_OT_restore_lower_level,
 )
 
 register, unregister = bpy.utils.register_classes_factory(classes)
