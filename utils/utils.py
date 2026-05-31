@@ -198,4 +198,5 @@ def restore_lower_levels(context):
         bpy.context.view_layer.objects.active = obj
         for mod in obj.modifiers:
             if mod.type == "MULTIRES":
+                print(f"Attempt to restore lower levels on {obj.name}")
                 bpy.ops.object.multires_rebuild_subdiv(modifier=mod.name)
