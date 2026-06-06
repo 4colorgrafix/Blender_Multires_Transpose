@@ -34,14 +34,14 @@ https://github.com/19829984/Blender_Multires_Transpose
 ## UPDATE by 4ColorGrafix
 
 Requires Blender 4.5.5 or later.
-Multires Transpose Version 2.0.0
+Multires Transpose Version 2.0.0:
 
 * Technical changes to files:
   * bmesh_utils.py — dispatch dicts replace the repeated match blocks; write_layer_data slice bug fixed; bmesh_from_faces uses a vert_map dict for correctness; 
     bmesh_join copies layers from all source meshes and also uses per-mesh vert_map.
   * utils.py — return type annotation corrected (List not set); create_meshes_by_original_name passes face objects directly instead of a fragile contiguous 
     slice;  source bmeshes freed immediately after joining.
-  * multires_transpose.py — double assignment replaced with str.removesuffix; logger.warn → print; auto-iterations now compares consecutive evaluated 
+  * multires_transpose.py — double assignment replaced with str.split; logger.warn → print; auto-iterations now compares consecutive evaluated 
     states (not mismatched vert counts) with a shape guard; timing logs displays 4 decimal places; Applies transpose matrix to original meshes.
   * ui.py — bl_label added to base class; poll added so panel only appears with an active mesh.
   * bmesh_context.py — added try/finally so the bmesh is always freed even if an exception is raised.
