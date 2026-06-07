@@ -195,6 +195,8 @@ def restore_lower_levels(context):
         context (bpy.types.Context): Blender context
     """
     for obj in context.selected_objects:
+        if obj.type != "MESH":
+            continue
         bpy.context.view_layer.objects.active = obj
         for mod in obj.modifiers:
             if mod.type == "MULTIRES":
