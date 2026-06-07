@@ -199,4 +199,7 @@ def restore_lower_levels(context):
         for mod in obj.modifiers:
             if mod.type == "MULTIRES":
                 print(f"Attempt to restore lower levels on {obj.name}")
-                bpy.ops.object.multires_rebuild_subdiv(modifier=mod.name)
+                try:
+                    bpy.ops.object.multires_rebuild_subdiv(modifier=mod.name)
+                except:
+                    print(f"No lower level found for {obj.name}")
