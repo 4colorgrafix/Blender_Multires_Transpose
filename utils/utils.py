@@ -32,7 +32,10 @@ def set_multires_to_nth_level(objects: Iterable[bpy.types.Object], n: int | None
                         mod.levels = n
                     changed_objs.append(obj)
                     levels.append(mod.levels)
-                    bpy.ops.object.modifier_apply(modifier="{mod.name}")
+                    try:
+                        bpy.ops.object.modifier_apply(modifier=mod.name)
+                    except:
+                        print(f"Failed to apply Multires on {obj.name}")
                     break
     return changed_objs, levels
 
